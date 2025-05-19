@@ -167,6 +167,7 @@ contains
          dic_alt_co2_ind   => marbl_tracer_indices%dic_alt_co2_ind,                             &
          alk_ind           => marbl_tracer_indices%alk_ind,                                     &
          alk_alt_co2_ind   => marbl_tracer_indices%alk_alt_co2_ind                              &
+         deficit_tracer_ind   => marbl_tracer_indices%deficit_tracer_ind                        &
          )
 
     !-----------------------------------------------------------------------
@@ -273,7 +274,8 @@ contains
                phhi       = phhi,                                          &
                ph         = ph_prev_surf,                                  &
                marbl_status_log = marbl_status_log)
-
+          
+          
           if (marbl_status_log%labort_marbl) then
              call marbl_status_log%log_error_trace('marbl_co2calc_surface() with flux_co2', subname)
              return
@@ -349,8 +351,9 @@ contains
           !  nmol/cm^2/s (positive down) to kg CO2/m^2/s (positive down)
           !-----------------------------------------------------------------------
 
-          surface_fluxes(:, dic_ind)         = surface_fluxes(:, dic_ind)         + flux_co2(:)
-          surface_fluxes(:, dic_alt_co2_ind) = surface_fluxes(:, dic_alt_co2_ind) + FLUX_ALT_CO2(:)
+          surface_fluxes(:, dic_ind)            = surface_fluxes(:, dic_ind)            + flux_co2(:)
+          surface_fluxes(:, dic_alt_co2_ind)    = surface_fluxes(:, dic_alt_co2_ind)    + FLUX_ALT_CO2(:)
+          surface_fluxes(:, deficit_tracer_ind) = surface_fluxes(:, deficit_tracer_ind) + pv_co2(:) / 20.0_r8
 
        else
           schmidt_co2(:) = c0

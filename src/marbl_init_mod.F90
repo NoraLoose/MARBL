@@ -520,6 +520,10 @@ contains
                marbl_tracer_metadata(marbl_tracer_indices%donr_ind))
     call marbl_init_non_autotroph_tracer_metadata('DOCr', 'Refractory DOC',               &
                marbl_tracer_metadata(marbl_tracer_indices%docr_ind))
+    call marbl_init_non_autotroph_tracer_metadata('C_CONSERVED', 'Conserved tracer',      &
+               marbl_tracer_metadata(marbl_tracer_indices%conserved_tracer_ind))
+    call marbl_init_non_autotroph_tracer_metadata('C_DEFICIT', 'Deficit tracer',          &
+               marbl_tracer_metadata(marbl_tracer_indices%deficit_tracer_ind))
 
     call marbl_init_non_autotroph_tracer_metadata('DIC_ALT_CO2', 'Dissolved Inorganic Carbon, Alternative CO2', &
                marbl_tracer_metadata(marbl_tracer_indices%dic_alt_co2_ind))

@@ -333,23 +333,25 @@ module marbl_interface_private_types
     type (marbl_tracer_count_type) :: ciso
 
     ! General tracers
-    integer (int_kind) :: po4_ind         = 0 ! dissolved inorganic phosphate
-    integer (int_kind) :: no3_ind         = 0 ! dissolved inorganic nitrate
-    integer (int_kind) :: sio3_ind        = 0 ! dissolved inorganic silicate
-    integer (int_kind) :: nh4_ind         = 0 ! dissolved ammonia
-    integer (int_kind) :: fe_ind          = 0 ! dissolved inorganic iron
-    integer (int_kind) :: lig_ind         = 0 ! Fe-binding Ligand
-    integer (int_kind) :: o2_ind          = 0 ! dissolved oxygen
-    integer (int_kind) :: dic_ind         = 0 ! dissolved inorganic carbon
-    integer (int_kind) :: dic_alt_co2_ind = 0 ! dissolved inorganic carbon with alternative CO2
-    integer (int_kind) :: alk_ind         = 0 ! alkalinity
-    integer (int_kind) :: alk_alt_co2_ind = 0 ! alkalinity with alternative CO2
-    integer (int_kind) :: doc_ind         = 0 ! dissolved organic carbon
-    integer (int_kind) :: don_ind         = 0 ! dissolved organic nitrogen
-    integer (int_kind) :: dop_ind         = 0 ! dissolved organic phosphorus
-    integer (int_kind) :: dopr_ind        = 0 ! refractory DOP
-    integer (int_kind) :: donr_ind        = 0 ! refractory DON
-    integer (int_kind) :: docr_ind        = 0 ! refractory DOC
+    integer (int_kind) :: po4_ind            = 0 ! dissolved inorganic phosphate
+    integer (int_kind) :: no3_ind            = 0 ! dissolved inorganic nitrate
+    integer (int_kind) :: sio3_ind           = 0 ! dissolved inorganic silicate
+    integer (int_kind) :: nh4_ind            = 0 ! dissolved ammonia
+    integer (int_kind) :: fe_ind             = 0 ! dissolved inorganic iron
+    integer (int_kind) :: lig_ind            = 0 ! Fe-binding Ligand
+    integer (int_kind) :: o2_ind             = 0 ! dissolved oxygen
+    integer (int_kind) :: dic_ind            = 0 ! dissolved inorganic carbon
+    integer (int_kind) :: dic_alt_co2_ind    = 0 ! dissolved inorganic carbon with alternative CO2
+    integer (int_kind) :: alk_ind            = 0 ! alkalinity
+    integer (int_kind) :: alk_alt_co2_ind    = 0 ! alkalinity with alternative CO2
+    integer (int_kind) :: doc_ind            = 0 ! dissolved organic carbon
+    integer (int_kind) :: don_ind            = 0 ! dissolved organic nitrogen
+    integer (int_kind) :: dop_ind            = 0 ! dissolved organic phosphorus
+    integer (int_kind) :: dopr_ind           = 0 ! refractory DOP
+    integer (int_kind) :: donr_ind           = 0 ! refractory DON
+    integer (int_kind) :: docr_ind           = 0 ! refractory DOC
+    integer (int_kind) :: conserved_tracer_ind = 0 ! conserved tracer
+    integer (int_kind) :: deficit_tracer_ind = 0 ! deficit tracer
 
     ! CISO tracers
     integer (int_kind) :: di13c_ind       = 0 ! dissolved inorganic carbon 13
@@ -1458,6 +1460,8 @@ contains
     call this%add_tracer_index('dopr', 'ecosys_base', this%dopr_ind, marbl_status_log)
     call this%add_tracer_index('donr', 'ecosys_base', this%donr_ind, marbl_status_log)
     call this%add_tracer_index('docr', 'ecosys_base', this%docr_ind, marbl_status_log)
+    call this%add_tracer_index('conserved_tracer', 'ecosys_base', this%conserved_tracer_ind, marbl_status_log)
+    call this%add_tracer_index('deficit_tracer', 'ecosys_base', this%deficit_tracer_ind, marbl_status_log)
 
     do n=1,zooplankton_cnt
       write(ind_name, "(2A)") trim(zooplankton_settings(n)%sname), "C"
