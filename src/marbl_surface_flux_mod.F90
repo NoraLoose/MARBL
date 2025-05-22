@@ -388,7 +388,8 @@ contains
 
       surface_fluxes(:, dic_ind)         = surface_fluxes(:, dic_ind)         + flux_co2(:)
       surface_fluxes(:, dic_alt_co2_ind) = surface_fluxes(:, dic_alt_co2_ind) + flux_alt_co2(:)
-      surface_fluxes(:, deficit_tracer_ind) = surface_fluxes(:, deficit_tracer_ind) + pv_co2(:) / 20.0_r8
+      surface_fluxes(:, deficit_tracer_ind) = surface_fluxes(:, deficit_tracer_ind) - &
+           (pv_co2(:) / 20.0_r8) * tracers_at_surface(:, deficit_tracer_ind)
 
     endif  !  lflux_gas_co2
 
