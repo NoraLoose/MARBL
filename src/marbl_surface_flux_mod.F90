@@ -166,7 +166,7 @@ contains
          dic_ind           => marbl_tracer_indices%dic_ind,                                     &
          dic_alt_co2_ind   => marbl_tracer_indices%dic_alt_co2_ind,                             &
          alk_ind           => marbl_tracer_indices%alk_ind,                                     &
-         alk_alt_co2_ind   => marbl_tracer_indices%alk_alt_co2_ind                              &
+         alk_alt_co2_ind   => marbl_tracer_indices%alk_alt_co2_ind,                             &
          deficit_tracer_ind   => marbl_tracer_indices%deficit_tracer_ind                        &
          )
 
