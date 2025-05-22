@@ -564,6 +564,13 @@ contains
           surface_flux_forcings(id)%metadata%varname       = 'd14c'
           surface_flux_forcings(id)%metadata%field_units   = 'permil'
         end if
+        
+        ! carbonate sensitivity
+        if (id .eq. ind%ddic_dco2_id) then
+          found = .true.
+          surface_flux_forcings(id)%metadata%varname       = 'ddic_dco2'
+          surface_flux_forcings(id)%metadata%field_units   = 'dimensionless'
+        end if
 
         if (.not.found) then
           write(log_message, "(A,I0,A)") "Index number ", id, &

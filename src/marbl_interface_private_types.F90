@@ -401,6 +401,7 @@ module marbl_interface_private_types
      integer(int_kind) :: ext_Si_flux_id       = 0
      integer(int_kind) :: d13c_id              = 0
      integer(int_kind) :: d14c_id              = 0
+     integer(int_kind) :: ddic_dco2_id         = 0
    contains
      procedure, public :: construct => surface_flux_forcing_index_constructor
   end type marbl_surface_flux_forcing_indexing_type
@@ -1746,6 +1747,10 @@ contains
         ! NHy Flux
         forcing_cnt = forcing_cnt + 1
         this%nhy_flux_id = forcing_cnt
+        
+        ! NHy Flux
+        forcing_cnt = forcing_cnt + 1
+        this%ddic_dco2_id = forcing_cnt
 
         ! ---------------------------------------------------------
         ! | Request these if bury coefficients are being adjusted |

@@ -142,6 +142,7 @@ contains
          iron_flux_in => surface_flux_forcings(surface_flux_forcing_ind%iron_flux_id)%field_0d,    &
          nox_flux     => surface_flux_forcings(surface_flux_forcing_ind%nox_flux_id)%field_0d,     &
          nhy_flux     => surface_flux_forcings(surface_flux_forcing_ind%nhy_flux_id)%field_0d,     &
+         ddic_dco2    => surface_flux_forcings(surface_flux_forcing_ind%ddic_dco2_id)%field_0d,     &
 
          piston_velocity      => surface_flux_internal%piston_velocity(:),   &
          flux_co2             => surface_flux_internal%flux_co2(:),          &
@@ -389,7 +390,7 @@ contains
       surface_fluxes(:, dic_ind)         = surface_fluxes(:, dic_ind)         + flux_co2(:)
       surface_fluxes(:, dic_alt_co2_ind) = surface_fluxes(:, dic_alt_co2_ind) + flux_alt_co2(:)
       surface_fluxes(:, deficit_tracer_ind) = surface_fluxes(:, deficit_tracer_ind) - &
-           (pv_co2(:) / 20.0_r8) * tracers_at_surface(:, deficit_tracer_ind)
+           (pv_co2(:) / ddic_dco2(:)) * tracers_at_surface(:, deficit_tracer_ind)
 
     endif  !  lflux_gas_co2
 
