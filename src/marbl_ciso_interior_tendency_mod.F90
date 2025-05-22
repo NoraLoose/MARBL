@@ -9,10 +9,12 @@ module marbl_ciso_interior_tendency_mod
   use marbl_constants_mod, only : c2
   use marbl_constants_mod, only : c1000
   use marbl_constants_mod, only : mpercm
+  use marbl_constants_mod, only : c14_lambda
 
   use marbl_settings_mod, only : autotroph_cnt
   use marbl_settings_mod, only : autotroph_settings
   use marbl_settings_mod, only : ciso_on
+  use marbl_settings_mod, only : unit_system_type
 
   use marbl_logging, only : marbl_log_type
 
@@ -33,19 +35,13 @@ module marbl_ciso_interior_tendency_mod
   public :: marbl_ciso_interior_tendency_compute
   public :: marbl_ciso_interior_tendency_autotroph_zero_consistency_enforce
 
-  !-----------------------------------------------------------------------
-  !  scalar constants for 14C decay calculation
-  !-----------------------------------------------------------------------
-
-   real (r8), parameter :: c14_halflife_years = 5730.0_r8 !C14 half file
-   real (r8) :: c14_lambda_inv_sec           ! Decay variable in seconds
-
 contains
 
   !***********************************************************************
 
   subroutine marbl_ciso_interior_tendency_compute( &
        marbl_domain,                               &
+       bot_flux_to_tend,                           &
        interior_tendency_share,                    &
        zooplankton_share,                          &
        marbl_particulate_share,                    &
@@ -54,6 +50,7 @@ contains
        autotroph_derived_terms,                    &
        temperature,                                &
        marbl_tracer_indices,                       &
+       unit_system,                                &
        interior_tendencies,                        &
        marbl_interior_diags,                       &
        marbl_status_log)
@@ -67,10 +64,10 @@ contains
     use marbl_constants_mod, only : R13C_std
     use marbl_constants_mod, only : R14C_std
     use marbl_constants_mod, only : spd
-    use marbl_constants_mod, only : spy
-    use marbl_ciso_diagnostics_mod, only : store_diagnostics_ciso_interior
+    use marbl_ciso_diagnostics_mod, only : marbl_ciso_diagnostics_interior_tendency_compute
 
     type(marbl_domain_type),                  intent(in)    :: marbl_domain
+    real (r8),                                intent(in)    :: bot_flux_to_tend(:)
     type(marbl_interior_tendency_share_type), intent(in)    :: interior_tendency_share
     type(zooplankton_share_type),             intent(in)    :: zooplankton_share
     type(marbl_particulate_share_type),       intent(in)    :: marbl_particulate_share
@@ -79,6 +76,7 @@ contains
     type(autotroph_derived_terms_type),       intent(in)    :: autotroph_derived_terms
     real (r8),                                intent(in)    :: temperature(:)
     type(marbl_tracer_index_type),            intent(in)    :: marbl_tracer_indices
+    type(unit_system_type),                   intent(in)    :: unit_system
     real (r8),                                intent(inout) :: interior_tendencies(:,:)  ! computed source/sink terms (inout because we don't touch non-ciso tracers)
     type(marbl_diagnostics_type),             intent(inout) :: marbl_interior_diags
     type(marbl_log_type),                     intent(inout) :: marbl_status_log
@@ -236,13 +234,6 @@ contains
     call PO14C%construct(num_levels=column_km)
     call P_Ca13CO3%construct(num_levels=column_km)
     call P_Ca14CO3%construct(num_levels=column_km)
-
-    !-----------------------------------------------------------------------
-    ! Set module variables
-    !-----------------------------------------------------------------------
-
-    !  Define decay variable for DI14C, using earlier defined half-life of 14C
-    c14_lambda_inv_sec = log(c2) / (c14_halflife_years * spy)
 
     !----------------------------------------------------------------------------------------
     ! Set cell attributes
@@ -555,11 +546,13 @@ contains
        ! Compute carbon isotope particulate terms
        !-----------------------------------------------------------------------
 
-       call compute_particulate_terms(k, marbl_domain, tracer_local(:,k), marbl_tracer_indices, &
-            interior_tendency_share, marbl_particulate_share, PO13C, P_Ca13CO3)
+       call compute_particulate_terms(k, marbl_domain, bot_flux_to_tend(:), tracer_local(:,:),   &
+            marbl_tracer_indices, interior_tendency_share, marbl_particulate_share, unit_system, &
+            PO13C, P_Ca13CO3)
 
-       call compute_particulate_terms(k, marbl_domain, tracer_local(:,k), marbl_tracer_indices, &
-            interior_tendency_share, marbl_particulate_share, PO14C, P_Ca14CO3)
+       call compute_particulate_terms(k, marbl_domain, bot_flux_to_tend(:), tracer_local(:,:),   &
+            marbl_tracer_indices, interior_tendency_share, marbl_particulate_share, unit_system, &
+            PO14C, P_Ca14CO3)
 
        !-----------------------------------------------------------------------
        ! Update interior_tendencies for the 7 carbon pools for each Carbon isotope
@@ -579,9 +572,9 @@ contains
 
           n = marbl_tracer_indices%auto_inds(auto_ind)%C14_ind
           interior_tendencies(n,k) = photo14C(auto_ind,k) - work1 * R14C_autotroph(auto_ind,k) - &
-               c14_lambda_inv_sec * autotroph_local%C14(auto_ind,k)
+               c14_lambda * autotroph_local%C14(auto_ind,k)
 
-          decay_14Ctot(k) = decay_14Ctot(k) + c14_lambda_inv_sec * autotroph_local%C14(auto_ind,k)
+          decay_14Ctot(k) = decay_14Ctot(k) + c14_lambda * autotroph_local%C14(auto_ind,k)
 
           n = marbl_tracer_indices%auto_inds(auto_ind)%Ca13CO3_ind
           if (n > 0) then
@@ -593,9 +586,9 @@ contains
           if (n > 0) then
              interior_tendencies(n,k) = Ca14CO3_PROD(auto_ind,k) - QCaCO3(auto_ind,k) &
                   * work1 * R14C_autotrophCaCO3(auto_ind,k)      &
-                  - c14_lambda_inv_sec * autotroph_local%Ca14CO3(auto_ind,k)
+                  - c14_lambda * autotroph_local%Ca14CO3(auto_ind,k)
 
-             decay_14Ctot(k) = decay_14Ctot(k) + c14_lambda_inv_sec * autotroph_local%Ca14CO3(auto_ind,k)
+             decay_14Ctot(k) = decay_14Ctot(k) + c14_lambda * autotroph_local%Ca14CO3(auto_ind,k)
           endif
        end do
 
@@ -611,9 +604,9 @@ contains
        interior_tendencies(zootot14C_ind,k) = &
               sum(auto_graze_zoo(:,k) * R14C_autotroph(:,k),dim=1) &
             + (zootot_graze_zoo(k) - zootot_graze(k) - zootot_loss(k)) &
-            * R14C_zoototC(k) - c14_lambda_inv_sec * zootot14C_loc(k)
+            * R14C_zoototC(k) - c14_lambda * zootot14C_loc(k)
 
-       decay_14Ctot(k) = decay_14Ctot(k) + c14_lambda_inv_sec * zootot14C_loc(k)
+       decay_14Ctot(k) = decay_14Ctot(k) + c14_lambda * zootot14C_loc(k)
 
        !-----------------------------------------------------------------------
        !  interior_tendencies: dissolved organic Matter 13C and 14C
@@ -621,9 +614,9 @@ contains
 
        interior_tendencies(do13ctot_ind,k) = DO13Ctot_prod(k) - DO13Ctot_remin(k)
 
-       interior_tendencies(do14ctot_ind,k) = DO14Ctot_prod(k) - DO14Ctot_remin(k) - c14_lambda_inv_sec * DO14Ctot_loc(k)
+       interior_tendencies(do14ctot_ind,k) = DO14Ctot_prod(k) - DO14Ctot_remin(k) - c14_lambda * DO14Ctot_loc(k)
 
-       decay_14Ctot(k) = decay_14Ctot(k) + c14_lambda_inv_sec * DO14Ctot_loc(k)
+       decay_14Ctot(k) = decay_14Ctot(k) + c14_lambda * DO14Ctot_loc(k)
 
        !-----------------------------------------------------------------------
        !   interior_tendencies: dissolved inorganic Carbon 13 and 14
@@ -642,9 +635,9 @@ contains
           + DO14Ctot_remin(k) + PO14C%remin(k) &
           + (zootot_loss_dic(k) + zootot_graze_dic(k)) * R14C_zoototC(k) &
           + P_Ca14CO3%remin(k) &
-          - c14_lambda_inv_sec * DI14C_loc(k)
+          - c14_lambda * DI14C_loc(k)
 
-       decay_14Ctot(k) = decay_14Ctot(k) + c14_lambda_inv_sec * DI14C_loc(k)
+       decay_14Ctot(k) = decay_14Ctot(k) + c14_lambda * DI14C_loc(k)
 
        do auto_ind = 1, autotroph_cnt
           if (marbl_tracer_indices%auto_inds(auto_ind)%Ca13CO3_ind > 0) then
@@ -678,7 +671,7 @@ contains
     ! update carbon isotope diagnostics
     ! FIXME #18: the following arguments need to be group into a derived type
 
-    call store_diagnostics_ciso_interior(&
+    call marbl_ciso_diagnostics_interior_tendency_compute(&
        marbl_domain,        &
        autotroph_d13C,      &
        autotroph_d14C,      &
@@ -709,11 +702,12 @@ contains
        P_Ca14CO3,           &
        interior_tendencies, &
        marbl_tracer_indices,&
+       unit_system,         &
        marbl_interior_diags,&
        marbl_status_log)
 
     if (marbl_status_log%labort_marbl) then
-       call marbl_status_log%log_error_trace("store_diagnostics_ciso_interior", subname)
+       call marbl_status_log%log_error_trace("marbl_ciso_diagnostics_interior_tendency_compute", subname)
        return
     end if
 
@@ -1056,8 +1050,8 @@ contains
 
   !***********************************************************************
 
-  subroutine compute_particulate_terms(k, domain, tracer_local, marbl_tracer_indices, &
-             interior_tendency_share, marbl_particulate_share, POC_ciso, P_CaCO3_ciso)
+  subroutine compute_particulate_terms(k, domain, bot_flux_to_tend, tracer_local, marbl_tracer_indices, &
+             interior_tendency_share, marbl_particulate_share, unit_system, POC_ciso, P_CaCO3_ciso)
 
     !----------------------------------------------------------------------------------------
     !  Compute outgoing fluxes and remineralization terms for Carbon isotopes.
@@ -1069,18 +1063,23 @@ contains
     !----------------------------------------------------------------------------------------
 
     use marbl_constants_mod, only : spd
+    use marbl_constants_mod, only : spy
     use marbl_settings_mod , only : denitrif_C_N
+    use marbl_settings_mod , only : parm_sed_denitrif_coeff
     use marbl_settings_mod , only : caco3_bury_thres_iopt
     use marbl_settings_mod , only : caco3_bury_thres_iopt_fixed_depth
     use marbl_settings_mod , only : caco3_bury_thres_depth
     use marbl_settings_mod , only : caco3_bury_thres_omega_calc
+    use marbl_interior_tendency_share_mod, only : marbl_interior_tendency_share_set_used_particle_terms_to_zero
 
     integer (int_kind),                       intent(in)    :: k                 ! vertical model level
     type(marbl_domain_type),                  intent(in)    :: domain
-    real(r8),                                 intent(in)    :: tracer_local(:)
+    real(r8),                                 intent(in)    :: bot_flux_to_tend(:)
+    real(r8),                                 intent(in)    :: tracer_local(:,:)
     type(marbl_tracer_index_type),            intent(in)    :: marbl_tracer_indices
     type(marbl_interior_tendency_share_type), intent(in)    :: interior_tendency_share
     type(marbl_particulate_share_type),       intent(in)    :: marbl_particulate_share
+    type(unit_system_type),                   intent(in)    :: unit_system
     type(column_sinking_particle_type),       intent(inout) :: POC_ciso          ! base units = nmol particulate organic Carbon isotope
     type(column_sinking_particle_type),       intent(inout) :: P_CaCO3_ciso      ! base units = nmol CaCO3 Carbon isotope
 
@@ -1090,11 +1089,13 @@ contains
     real (r8) ::              &
          dz_loc,              & ! dz at a particular i,j location
          dzr_loc,             & ! dzr at a particular i,j location
-         flux_alt,           & ! flux to floor in alternative units, to match particular parameterizations
+         flux_alt,            & ! flux to floor in alternative units, to match particular parameterizations
          POC_ciso_PROD_avail, & ! 13C POC production available for excess POC flux
-         Rciso_POC_hflux_out, & ! ciso/12C of outgoing flux of hard POC
-         sed_denitrif,        & ! sedimentary denitrification (umolN/cm^2/s)
-         other_remin            ! sedimentary remin not due to oxic or denitrification
+         Rciso_POC_hflux_out    ! ciso/12C of outgoing flux of hard POC
+
+    real (r8), dimension(domain%km) :: &
+         sed_denitrif,                 & ! sedimentary denitrification (umolN/cm^2/s)
+         other_remin                     ! sedimentary remin not due to oxic or denitrification
     !-----------------------------------------------------------------------
 
     associate(                                                                &
@@ -1102,8 +1103,9 @@ contains
          column_kmt        => domain%kmt                                    , & ! IN
          column_delta_z    => domain%delta_z(k)                             , & ! IN
          column_zw         => domain%zw(k)                                  , & ! IN
-         O2_loc            => tracer_local(marbl_tracer_indices%O2_ind)     , & ! IN
-         NO3_loc           => tracer_local(marbl_tracer_indices%NO3_ind)    , & ! IN
+         O2_loc            => tracer_local(marbl_tracer_indices%O2_ind,k)   , & ! IN
+         O2_loc_col        => tracer_local(marbl_tracer_indices%O2_ind,:)   , & ! IN
+         NO3_loc           => tracer_local(marbl_tracer_indices%NO3_ind,k)  , & ! IN
          CO3               => interior_tendency_share%CO3_fields(k)         , & ! IN
          CO3_sat_calcite   => interior_tendency_share%CO3_sat_calcite(k)    , & ! IN
          decay_CaCO3       => marbl_particulate_share%decay_CaCO3_fields    , & ! IN
@@ -1125,8 +1127,8 @@ contains
     POC_ciso%sed_loss(k)     = c0
     P_CaCO3_ciso%sed_loss(k) = c0
 
-    sed_denitrif             = c0
-    other_remin              = c0
+    sed_denitrif(k)          = c0
+    other_remin(k)           = c0
 
     !-----------------------------------------------------------------------
     ! if any incoming carbon flux is zero, set carbon isotope flux to zero
@@ -1207,6 +1209,10 @@ contains
             ((POC_ciso%sflux_in(k) - POC_ciso%sflux_out(k)) + &
              (POC_ciso%hflux_in(k) - POC_ciso%hflux_out(k))) * dzr_loc
 
+    else ! k > column_kmt
+      call marbl_interior_tendency_share_set_used_particle_terms_to_zero(k, POC_ciso)
+      call marbl_interior_tendency_share_set_used_particle_terms_to_zero(k, P_CaCO3_ciso)
+      dzr_loc = c0
     endif
 
     !-----------------------------------------------------------------------
@@ -1233,23 +1239,26 @@ contains
        POC_ciso%to_floor = POC_ciso%sflux_out(k) + POC_ciso%hflux_out(k)
 
        if (POC_ciso%to_floor > c0) then
-          flux_alt = POC_ciso%to_floor * mpercm * spd ! convert to mmol/m^2/day
+          flux_alt = POC_ciso%to_floor * unit_system%len2m * spd ! convert to mmol/m^2/day [nmol/cm^2 = cm*mmol/m^3 = mmol/m^2 * cm/m]
 
           POC_ciso%sed_loss(k) = POC_ciso%to_floor * min(0.8_r8, POC_bury_coeff &
                * (0.013_r8 + 0.53_r8 * flux_alt*flux_alt / (7.0_r8 + flux_alt)**2))
 
 
-          sed_denitrif = dzr_loc * POC_ciso%to_floor * (0.06_r8 + 0.19_r8 * 0.99_r8**(O2_loc-NO3_loc))
+          sed_denitrif(1:k) = bot_flux_to_tend(1:k) * parm_sed_denitrif_coeff * POC_ciso%to_floor * &
+                              (0.06_r8 + 0.19_r8 * 0.99_r8**(O2_loc-NO3_loc))
 
-          flux_alt = POC_ciso%to_floor*1.0e-6_r8*spd*365.0_r8 ! convert to mmol/cm^2/year
-          other_remin = dzr_loc &
-               * min ( min(0.1_r8 + flux_alt,0.5_r8) * (POC_ciso%to_floor - POC_ciso%sed_loss(k)) , &
-                      (POC_ciso%to_floor - POC_ciso%sed_loss(k) - (sed_denitrif*dz_loc*denitrif_C_N)))
+          flux_alt = POC_ciso%to_floor*(unit_system%conc_flux2mmol_m2s * (mpercm**2))*spy ! convert to mmol/cm^2/year
+          other_remin(1:k) = min(bot_flux_to_tend(1:k) * &
+                                 min(0.1_r8 + flux_alt,0.5_r8) * (POC_ciso%to_floor - POC_ciso%sed_loss(k)), &
+                                 bot_flux_to_tend(1:k) * (POC_ciso%to_floor - POC_ciso%sed_loss(k)) - &
+                                 sed_denitrif(1:k) * denitrif_C_N)
 
           ! if bottom water O2 is depleted, assume all remin is denitrif + other
-          if (O2_loc < c1) then
-             other_remin = dzr_loc * (POC_ciso%to_floor - POC_ciso%sed_loss(k) - (sed_denitrif * dz_loc * denitrif_C_N))
-          endif
+          where (O2_loc_col(1:k) < c1)
+             other_remin(1:k) = bot_flux_to_tend(1:k) * (POC_ciso%to_floor - POC_ciso%sed_loss(k)) - &
+                                sed_denitrif(1:k) * denitrif_C_N
+          endwhere
        endif
 
        P_CaCO3_ciso%to_floor = P_CaCO3_ciso%sflux_out(k) + P_CaCO3_ciso%hflux_out(k)
@@ -1270,14 +1279,15 @@ contains
        !----------------------------------------------------------------------------------
 
        if (P_CaCO3_ciso%to_floor > c0) then
-          P_CaCO3_ciso%remin(k) = P_CaCO3_ciso%remin(k) + ((P_CaCO3_ciso%to_floor - P_CaCO3_ciso%sed_loss(k)) * dzr_loc)
+          P_CaCO3_ciso%remin(1:k) = P_CaCO3_ciso%remin(1:k) &
+               + ((P_CaCO3_ciso%to_floor - P_CaCO3_ciso%sed_loss(k)) * bot_flux_to_tend(1:k))
        endif
 
        if (POC_ciso%to_floor > c0) then
-          POC_ciso%remin(k) = POC_ciso%remin(k) + ((POC_ciso%to_floor - POC_ciso%sed_loss(k)) * dzr_loc)
+          POC_ciso%remin(1:k) = POC_ciso%remin(1:k) &
+               + ((POC_ciso%to_floor - POC_ciso%sed_loss(k)) * bot_flux_to_tend(1:k))
        endif
-
-    endif
+    endif  ! k == column_kmt
 
     end associate
 
