@@ -1748,7 +1748,7 @@ contains
         forcing_cnt = forcing_cnt + 1
         this%nhy_flux_id = forcing_cnt
         
-        ! NHy Flux
+        ! Carbonate sensitivity
         forcing_cnt = forcing_cnt + 1
         this%ddic_dco2_id = forcing_cnt
 
